@@ -47,6 +47,14 @@ open class HPScrollView : UIScrollView {
     private var isObserving: Bool = true
     private var lock: Bool = false
     private var isScrollingToTop: Bool = false
+    // FIX: Guards against KVO re-entrancy in observeValue(...).
+    // observeValue calls scrollView(_:setContentOffset:), which assigns
+    // contentOffset and synchronously fires another contentOffset KVO,
+    // re-entering observeValue. During that re-entrant call the
+    // `change as? CGPoint` downcast can crash with EXC_BAD_ACCESS while the
+    // Swift runtime resolves metadata. KVO is delivered synchronously on the
+    // main thread, so a simple Bool is enough to detect the re-entry.
+    private var isHandlingObservation: Bool = false
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -160,7 +168,17 @@ extension HPScrollView {
         guard context == &HPScrollView.KVOContext && keyPath == #keyPath(UIScrollView.contentOffset) else {
             return super.observeValue(forKeyPath: keyPath, of: object, change: change, context: context)
         }
-        
+
+        // FIX: KVO re-entrancy guard.
+        // The body below calls scrollView(_:setContentOffset:), which changes
+        // contentOffset and re-enters this method synchronously via KVO. During
+        // that re-entry the `change as? CGPoint` downcast can race with Swift
+        // metadata resolution and crash with EXC_BAD_ACCESS, so bail out as soon
+        // as a re-entry is detected.
+        if isHandlingObservation { return }
+        isHandlingObservation = true
+        defer { isHandlingObservation = false }
+
         guard let scrollView = object as? UIScrollView,
             let new = change?[.newKey] as? CGPoint,
             let old = change?[.oldKey] as? CGPoint else { return }
@@ -224,6 +242,32 @@ extension HPScrollView {
     }
 
     func scrollView(_ scrollView: UIScrollView, setContentOffset offset: CGPoint) {
+        // FIX(1): Skip the assignment when the target equals the current offset.
+        // Assigning contentOffset fires a KVO notification even when the value
+        // does not change, which can drive the re-entrant layout/allocation that
+        // crashes. Sub-pixel differences are treated as equal.
+        let current = scrollView.contentOffset
+        if abs(current.x - offset.x) < 0.5, abs(current.y - offset.y) < 0.5 {
+            return
+        }
+
+        // FIX(2): When called from inside observeValue (i.e. during a layout /
+        // KVO re-entrancy), assigning contentOffset synchronously fires
+        // _NSSetPointValueAndNotify in the middle of layoutBelowIfNeeded and can
+        // mutate the CA::Layer hierarchy, crashing with EXC_BAD_ACCESS. Defer the
+        // assignment to the next run loop so it runs after layout settles.
+        if isHandlingObservation {
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                let now = scrollView.contentOffset
+                if abs(now.x - offset.x) < 0.5, abs(now.y - offset.y) < 0.5 { return }
+                self.isObserving = false
+                scrollView.contentOffset = offset
+                self.isObserving = true
+            }
+            return
+        }
+
         isObserving = false
         scrollView.contentOffset = offset
         isObserving = true
