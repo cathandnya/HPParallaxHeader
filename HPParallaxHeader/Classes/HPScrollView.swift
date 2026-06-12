@@ -55,6 +55,12 @@ open class HPScrollView : UIScrollView {
     // Swift runtime resolves metadata. KVO is delivered synchronously on the
     // main thread, so a simple Bool is enough to detect the re-entry.
     private var isHandlingObservation: Bool = false
+    // FIX: Coalesces the deferred clamp correction scheduled from inside
+    // observeValue. During a fast scroll many corrections would be enqueued; we
+    // keep at most one pending and always recompute the clamp target from the
+    // latest scroll state when it runs, so the header never jumps back to a
+    // stale offset.
+    private var hasPendingDeferredCorrection: Bool = false
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -241,6 +247,23 @@ extension HPScrollView {
         observedViews.removeAll()
     }
 
+    /// Recomputes the clamped contentOffset for `self` from the current scroll
+    /// state, or returns nil when no boundary clamp is needed.
+    ///
+    /// This mirrors the absolute-boundary clamp branches in observeValue (the
+    /// `-contentInset.top` and `-minimumHeight` cases). It deliberately omits the
+    /// `diff`-based "restore to old offset" branch, which depends on a past value
+    /// that cannot be recomputed from the present state. Keep the conditions here
+    /// in sync with observeValue's self branch.
+    private func clampedSelfOffset() -> CGPoint? {
+        if contentOffset.y < -contentInset.top && !bounces {
+            return CGPoint(x: contentOffset.x, y: -contentInset.top)
+        } else if contentOffset.y > -parallaxHeader.minimumHeight {
+            return CGPoint(x: contentOffset.x, y: -parallaxHeader.minimumHeight)
+        }
+        return nil
+    }
+
     func scrollView(_ scrollView: UIScrollView, setContentOffset offset: CGPoint) {
         // FIX(1): Skip the assignment when the target equals the current offset.
         // Assigning contentOffset fires a KVO notification even when the value
@@ -256,13 +279,32 @@ extension HPScrollView {
         // _NSSetPointValueAndNotify in the middle of layoutBelowIfNeeded and can
         // mutate the CA::Layer hierarchy, crashing with EXC_BAD_ACCESS. Defer the
         // assignment to the next run loop so it runs after layout settles.
+        //
+        // The captured `offset` goes stale during a fast scroll, so do NOT apply
+        // it verbatim — for `self` we recompute the boundary clamp from the live
+        // scroll state when the block runs, which removes the position drift /
+        // backward jump. At most one correction is kept pending (coalesced); any
+        // later requests are dropped because the recompute already uses the
+        // latest state.
         if isHandlingObservation {
+            if hasPendingDeferredCorrection { return }
+            hasPendingDeferredCorrection = true
             DispatchQueue.main.async { [weak self] in
                 guard let self = self else { return }
+                self.hasPendingDeferredCorrection = false
+
+                let target: CGPoint
+                if scrollView === self {
+                    guard let recomputed = self.clampedSelfOffset() else { return }
+                    target = recomputed
+                } else {
+                    target = offset
+                }
+
                 let now = scrollView.contentOffset
-                if abs(now.x - offset.x) < 0.5, abs(now.y - offset.y) < 0.5 { return }
+                if abs(now.x - target.x) < 0.5, abs(now.y - target.y) < 0.5 { return }
                 self.isObserving = false
-                scrollView.contentOffset = offset
+                scrollView.contentOffset = target
                 self.isObserving = true
             }
             return

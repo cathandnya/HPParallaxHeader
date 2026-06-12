@@ -161,6 +161,15 @@ open class HPParallaxHeader: NSObject {
     private var positionConstraint: NSLayoutConstraint?
     private var heightConstraint: NSLayoutConstraint?
     private var isObserving: Bool = false
+    // FIX: Guards against layout re-entrancy in layoutContentView().
+    // contentOffset KVO drives layoutContentView(), which mutates Auto Layout
+    // constraints and runs layoutSubviews(). When HPScrollView clamps the
+    // contentOffset synchronously, that re-enters this observer mid-layout and
+    // re-runs layoutSubviews() inside an active layout pass, corrupting the
+    // CALayer / Auto Layout state and crashing with EXC_BAD_ACCESS. The Bool
+    // re-entrancy guard in HPScrollView cannot cover this path because this is a
+    // separate observer (different object and KVO context).
+    private var isLayingOutContentView: Bool = false
     
     // MARK: - Constraints
     func updateConstraints() {
@@ -243,6 +252,15 @@ open class HPParallaxHeader: NSObject {
     
 
     private func layoutContentView() {
+        // FIX: Skip when already laying out to avoid re-entering layoutSubviews()
+        // inside an active layout pass (see isLayingOutContentView). A skipped
+        // intermediate frame is harmless: the clamped contentOffset fires another
+        // KVO notification that re-runs this method, so the header still settles
+        // at the correct position.
+        if isLayingOutContentView { return }
+        isLayingOutContentView = true
+        defer { isLayingOutContentView = false }
+
         let minimumHeightReal = min(minimumHeight, height);
         let relativeYOffset = (scrollView?.contentOffset.y ?? 0) + (scrollView?.contentInset.top ?? 0) - height
         let relativeHeight  = -relativeYOffset;
