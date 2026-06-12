@@ -13,7 +13,6 @@
 		0E8714D12657BD8200327BD1 /* HPScrollViewExample.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E8714D02657BD8200327BD1 /* HPScrollViewExample.swift */; };
 		0EBD4A6C265A0C3200798655 /* HPFalconViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EBD4A6B265A0C3200798655 /* HPFalconViewController.swift */; };
 		0EBD4A6E265A0CEF00798655 /* HPWebViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EBD4A6D265A0CEF00798655 /* HPWebViewController.swift */; };
-		0EEE44122FDBE4DC00B91EC8 /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0EEE44112FDBE4DC00B91EC8 /* WebKit.framework */; };
 		3046F83DA72E20F5285F56B7 /* Pods_HPParallaxHeader_Example.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B0AD6A27F03E2F5768320095 /* Pods_HPParallaxHeader_Example.framework */; };
 		54340CAAD83E77CA444DA693 /* Pods_HPParallaxHeader_Tests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 693FA2B4E17A92C1B32B5739 /* Pods_HPParallaxHeader_Tests.framework */; };
 		607FACD61AFB9204008FA782 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 607FACD51AFB9204008FA782 /* AppDelegate.swift */; };
@@ -40,7 +39,6 @@
 		0E8714D02657BD8200327BD1 /* HPScrollViewExample.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HPScrollViewExample.swift; sourceTree = "<group>"; };
 		0EBD4A6B265A0C3200798655 /* HPFalconViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HPFalconViewController.swift; sourceTree = "<group>"; };
 		0EBD4A6D265A0CEF00798655 /* HPWebViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HPWebViewController.swift; sourceTree = "<group>"; };
-		0EEE44112FDBE4DC00B91EC8 /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
 		358ADADFEC650AAB3B0D1EEE /* README.md */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = net.daringfireball.markdown; name = README.md; path = ../README.md; sourceTree = "<group>"; };
 		43E192DCC80B3DB314273F2D /* Pods-HPParallaxHeader_Example.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-HPParallaxHeader_Example.release.xcconfig"; path = "Target Support Files/Pods-HPParallaxHeader_Example/Pods-HPParallaxHeader_Example.release.xcconfig"; sourceTree = "<group>"; };
 		607FACD01AFB9204008FA782 /* HPParallaxHeader_Example.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HPParallaxHeader_Example.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -66,7 +64,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				0EEE44122FDBE4DC00B91EC8 /* WebKit.framework in Frameworks */,
 				3046F83DA72E20F5285F56B7 /* Pods_HPParallaxHeader_Example.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -85,7 +82,6 @@
 		21EF68BD0A9B987B65CE2942 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				0EEE44112FDBE4DC00B91EC8 /* WebKit.framework */,
 				B0AD6A27F03E2F5768320095 /* Pods_HPParallaxHeader_Example.framework */,
 				693FA2B4E17A92C1B32B5739 /* Pods_HPParallaxHeader_Tests.framework */,
 			);
