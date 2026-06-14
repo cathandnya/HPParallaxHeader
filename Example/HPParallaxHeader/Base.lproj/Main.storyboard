@@ -221,7 +221,7 @@
         <!--Tab Bar Controller-->
         <scene sceneID="6l6-DX-DzO">
             <objects>
-                <tabBarController id="gJ1-TG-u0D" sceneMemberID="viewController">
+                <tabBarController id="gJ1-TG-u0D" customClass="ExampleTabBarController" customModule="HPParallaxHeader_Example" customModuleProvider="target" sceneMemberID="viewController">
                     <tabBar key="tabBar" contentMode="scaleToFill" translucent="NO" id="G4N-fV-aHA">
                         <rect key="frame" x="0.0" y="0.0" width="320" height="49"/>
                         <autoresizingMask key="autoresizingMask"/>
