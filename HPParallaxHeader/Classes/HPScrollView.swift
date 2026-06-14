@@ -44,7 +44,10 @@ open class HPScrollView : UIScrollView {
     }
 
     private var observedViews: [UIScrollView] = []
-    private var isObserving: Bool = true
+    private var observingCounter = 0
+    private var isObserving: Bool {
+        observingCounter == 0
+    }
     private var lock: Bool = false
     private var isScrollingToTop: Bool = false
     // FIX: Guards against KVO re-entrancy in observeValue(...).
@@ -75,7 +78,6 @@ open class HPScrollView : UIScrollView {
         panGestureRecognizer.cancelsTouchesInView = false
         addObserver(self, forKeyPath: #keyPath(UIScrollView.contentOffset),
                     options:[.new, .old], context: &HPScrollView.KVOContext)
-        isObserving = true
     }
 
     deinit {
@@ -169,15 +171,8 @@ extension HPScrollView {
             return super.observeValue(forKeyPath: keyPath, of: object, change: change, context: context)
         }
 
-        // FIX: KVO re-entrancy guard.
-        // The body below calls scrollView(_:setContentOffset:), which changes
-        // contentOffset and re-enters this method synchronously via KVO. During
-        // that re-entry the `change as? CGPoint` downcast can race with Swift
-        // metadata resolution and crash with EXC_BAD_ACCESS, so bail out as soon
-        // as a re-entry is detected.
-        if isHandlingObservation { return }
-        isHandlingObservation = true
-        defer { isHandlingObservation = false }
+        // NOTE: re-entrancy guard temporarily removed to reproduce the original
+        // EXC_BAD_ACCESS crash (matches the pre-fix state at 460606c).
 
         guard let scrollView = object as? UIScrollView,
             let new = change?[.newKey] as? CGPoint,
@@ -251,26 +246,13 @@ extension HPScrollView {
             return
         }
 
-        // FIX(2): When called from inside observeValue (i.e. during a layout /
-        // KVO re-entrancy), assigning contentOffset synchronously fires
-        // _NSSetPointValueAndNotify in the middle of layoutBelowIfNeeded and can
-        // mutate the CA::Layer hierarchy, crashing with EXC_BAD_ACCESS. Defer the
-        // assignment to the next run loop so it runs after layout settles.
-        if isHandlingObservation {
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
-                let now = scrollView.contentOffset
-                if abs(now.x - offset.x) < 0.5, abs(now.y - offset.y) < 0.5 { return }
-                self.isObserving = false
-                scrollView.contentOffset = offset
-                self.isObserving = true
-            }
-            return
-        }
-
-        isObserving = false
+        // FIX(2) REMOVED (temporarily, to reproduce the crash): the deferred
+        // DispatchQueue.main.async assignment was here. With it gone the
+        // contentOffset is assigned synchronously inside observeValue / the
+        // layout pass, which is the EXC_BAD_ACCESS repro path.
+        observingCounter += 1
         scrollView.contentOffset = offset
-        isObserving = true
+        observingCounter -= 1
     }
 }
 
